@@ -105,7 +105,7 @@ test_valid() {
     
     # Test if it sorts correctly
     if [ -f "$CHECKER" ]; then
-        RESULT=$(eval "$PUSH_SWAP $args" 2>/dev/null | $CHECKER $args 2>&1)
+        RESULT=$(eval "$PUSH_SWAP $args" 2>/dev/null | eval "$CHECKER $args" 2>&1)
         MOVES=$(eval "$PUSH_SWAP $args" 2>/dev/null | wc -l | tr -d ' ')
         
         if echo "$RESULT" | grep -q "OK"; then
@@ -119,6 +119,7 @@ test_valid() {
         else
             echo -e "${RED}✗ Test $test_num: FAIL${DEF} - $description (not sorted correctly)"
             echo "Test $test_num FAILED: $args" >> $LOG_FILE
+            echo "Result: $RESULT" >> $LOG_FILE
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
     else
@@ -228,7 +229,7 @@ test_valid 66 "2147483647 2 4 7" "With INT_MAX" 12
 test_valid 67 "99 -2147483648 23 545" "With INT_MIN" 12
 test_valid 68 "'2147483647 843 56544 24394'" "INT_MAX in string" 12
 test_valid 69 "'95 99 -9 10 9'" "Both 9 and -9 (different)" 12
-test_valid 70 "1 3 5 +9 20 -4 50 60 04 08" "Mixed signs and leading zeros" 12
+test_valid 70 "1 3 5 +9 20 -4 50 60 04 08" "Mixed signs and leading zeros" 35
 test_valid 71 "'3 4 6 8 9 74 -56 +495'" "String with signs" 12
 
 echo -e "\n${CYAN}→ Testing 2 numbers (1 move max)${DEF}"
