@@ -23,7 +23,7 @@ WHITE='\033[0;97m'
 
 # Configuration
 PUSH_SWAP="./push_swap"
-CHECKER="./checker_Mac"  # Change to ./checker_linux if on Linux
+CHECKER="./checker_linux"  # Change to ./checker_linux if on Linux
 LOG_FILE="test_errors.log"
 PROGRESSIVE_MODE=0
 
