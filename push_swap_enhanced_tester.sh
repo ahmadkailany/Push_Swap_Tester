@@ -62,11 +62,7 @@ test_error() {
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
     
     # Run and capture stderr
-    if [ "$args" == '"\n"' ]; then
-        OUTPUT=$(printf '\n' | $PUSH_SWAP 2>&1)
-    else
-        OUTPUT=$(eval "$PUSH_SWAP $args" 2>&1)
-    fi
+    OUTPUT=$(eval "$PUSH_SWAP $args" 2>&1)
     
     if echo "$OUTPUT" | grep -q "Error"; then
         echo -e "${GREEN}✓ Test $test_num: PASS${DEF} - $description"
@@ -150,7 +146,7 @@ test_error 9 "42 -2 10 11 0 90 45 500 -200 e" "Letter at end of list"
 
 echo -e "\n${CYAN}→ Empty and whitespace${DEF}"
 test_error 10 '""' "Empty string"
-test_error 11 '"\n"' "Newline character"
+test_error 11 "" "No arguments (argc=1)"
 test_error 12 "'   '" "Only spaces"
 
 echo -e "\n${CYAN}→ Duplicate numbers${DEF}"
