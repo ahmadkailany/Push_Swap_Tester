@@ -483,54 +483,54 @@ print_summary() {
 
 # Special evaluation mode (obfuscated)
 run_art_mode() {
-    eval "$(echo cHJpbnRfc2VjdGlvbiAiU1BFQ0lBTCBFVkFMVUFUSU9OIE1PREUi|base64 -d)"
-    eval "$(echo ZWNobyAtZSAiJHtQVVJQTEV9JHtCT0xEfVJ1bm5pbmcgc3BlY2lhbCBldmFsdWF0aW9uIHRlc3RzLi4uJHtOQ30i|base64 -d)"
+    print_section "SPECIAL EVALUATION MODE"
+    echo -e "${PURPLE}${BOLD}Running special evaluation tests...${NC}"
     echo ""
     
     # Error management tests
-    eval "$(echo cHJpbnRfc2VjdGlvbiAiRVJST1IgTUFOQUdFTUVOVCI=|base64 -d)"
-    eval "$(echo cnVuX2Vycm9yX3Rlc3QgIk5vbi1udW1lcmljIHBhcmFtZXRlciIgMSAyIGEgMw==|base64 -d)"
-    eval "$(echo cnVuX2Vycm9yX3Rlc3QgIkR1cGxpY2F0ZSBwYXJhbWV0ZXIiIDEgMiAzIDI=|base64 -d)"
-    eval "$(echo cnVuX2Vycm9yX3Rlc3QgIkdyZWF0ZXIgdGhhbiBJTlRfTUFYIiAxIDIxNDc0ODM2NDg=|base64 -d)"
+    print_section "ERROR MANAGEMENT"
+    run_error_test "Non-numeric parameter" 1 2 a 3
+    run_error_test "Duplicate parameter" 1 2 3 2
+    run_error_test "Greater than INT_MAX" 1 2147483648
     
     TOTAL=$((TOTAL + 1))
     local x=$(./push_swap 2>&1)
     if [ -z "$x" ]; then
-        eval "$(echo ZWNobyAtZSAiJHtHUkVFTn3inJMgUEFTUyR7TkN9IE5vIHBhcmFtZXRlcnMgLSBubyBvdXRwdXQi|base64 -d)"
+        echo -e "${GREEN}✓ PASS${NC} No parameters - no output"
         PASSED=$((PASSED + 1))
     else
-        eval "$(echo ZWNobyAtZSAiJHtSRUR94pyXIEZBSUwke05DfSBObyBwYXJhbWV0ZXJzIC0gZXhwZWN0ZWQgbm8gb3V0cHV0Ig==|base64 -d)"
+        echo -e "${RED}✗ FAIL${NC} No parameters - expected no output"
         FAILED=$((FAILED + 1))
         FAILED_TESTS+=("No parameters - Expected no output")
     fi
     
     # Strategy flags
-    eval "$(echo cHJpbnRfc2VjdGlvbiAiU1RSQVRFR1kgRkxBR1Mi|base64 -d)"
-    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIi0tc2ltcGxlIGZsYWciIDAgIi0tc2ltcGxlIiA1IDQgMyAyIDE=|base64 -d)"
-    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIi0tbWVkaXVtIGZsYWciIDAgIi0tbWVkaXVtIiA1IDQgMyAyIDE=|base64 -d)"
-    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIi0tY29tcGxleCBmbGFnIiAwICItLWNvbXBsZXgiIDUgNCAzIDIgMQ==|base64 -d)"
-    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIi0tYWRhcHRpdmUgZmxhZyIgMCAiLS1hZGFwdGl2ZSIgNSA0IDMgMiAx|base64 -d)"
+    print_section "STRATEGY FLAGS"
+    run_valid_test "--simple flag" 0 "--simple" 5 4 3 2 1
+    run_valid_test "--medium flag" 0 "--medium" 5 4 3 2 1
+    run_valid_test "--complex flag" 0 "--complex" 5 4 3 2 1
+    run_valid_test "--adaptive flag" 0 "--adaptive" 5 4 3 2 1
     
     TOTAL=$((TOTAL + 1))
     local y=$(./push_swap 5 4 3 2 1 2>/dev/null | ./checker_linux 5 4 3 2 1 2>&1)
     if echo "$y" | grep -q "OK"; then
-        eval "$(echo ZWNobyAtZSAiJHtHUkVFTn3inJMgUEFTUyR7TkN9IERlZmF1bHQgZmxhZyAobm8gZmxhZyk=|base64 -d)"
+        echo -e "${GREEN}✓ PASS${NC} Default flag (no flag)"
         PASSED=$((PASSED + 1))
     else
-        eval "$(echo ZWNobyAtZSAiJHtSRUR94pyXIEZBSUwke05DfSBEZWZhdWx0IGZsYWcgKG5vIGZsYWcp|base64 -d)"
+        echo -e "${RED}✗ FAIL${NC} Default flag (no flag)"
         FAILED=$((FAILED + 1))
         FAILED_TESTS+=("Default flag (no flag)")
     fi
     
     # Already sorted
-    eval "$(echo cHJpbnRfc2VjdGlvbiAiSURFTlRJVFkgVEVTVCAtIEFscmVhZHkgU29ydGVkIg==|base64 -d)"
+    print_section "IDENTITY TEST - Already Sorted"
     TOTAL=$((TOTAL + 1))
     local z=$(./push_swap 42 2>&1)
     if [ -z "$z" ]; then
-        eval "$(echo ZWNobyAtZSAiJHtHUkVFTn3inJMgUEFTUyR7TkN9IFNpbmdsZSBudW1iZXIgLSBubyBvdXRwdXQi|base64 -d)"
+        echo -e "${GREEN}✓ PASS${NC} Single number - no output"
         PASSED=$((PASSED + 1))
     else
-        eval "$(echo ZWNobyAtZSAiJHtSRUR94pyXIEZBSUwke05DfSBTaW5nbGUgbnVtYmVyIC0gZXhwZWN0ZWQgbm8gb3V0cHV0Ig==|base64 -d)"
+        echo -e "${RED}✗ FAIL${NC} Single number - expected no output"
         FAILED=$((FAILED + 1))
         FAILED_TESTS+=("Single number")
     fi
@@ -538,24 +538,24 @@ run_art_mode() {
     TOTAL=$((TOTAL + 1))
     local w=$(./push_swap 0 1 2 3 2>&1)
     if [ -z "$w" ]; then
-        eval "$(echo ZWNobyAtZSAiJHtHUkVFTn3inJMgUEFTUyR7TkN9IFNvcnRlZCBpbnB1dCAtIG5vIG91dHB1dCI=|base64 -d)"
+        echo -e "${GREEN}✓ PASS${NC} Sorted input - no output"
         PASSED=$((PASSED + 1))
     else
-        eval "$(echo ZWNobyAtZSAiJHtSRUR94pyXIEZBSUwke05DfSBTb3J0ZWQgaW5wdXQgLSBleHBlY3RlZCBubyBvdXRwdXQi|base64 -d)"
+        echo -e "${RED}✗ FAIL${NC} Sorted input - expected no output"
         FAILED=$((FAILED + 1))
         FAILED_TESTS+=("Sorted input")
     fi
     
     # Small inputs
-    eval "$(echo cHJpbnRfc2VjdGlvbiAiU01BTEwgSU5QVVRTIg==|base64 -d)"
-    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIjMgbnVtYmVycyIgMyAiIiAyIDEgMw==|base64 -d)"
-    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIjUgbnVtYmVycyIgNSAiIiAxIDUgMiA0IDM=|base64 -d)"
+    print_section "SMALL INPUTS"
+    run_valid_test "3 numbers" 3 "" 2 1 3
+    run_valid_test "5 numbers" 5 "" 1 5 2 4 3
     
     # Performance tests
-    eval "$(echo cHJpbnRfc2VjdGlvbiAiTUVESVVNIElOUFVUUyAtIDEwMCBudW1iZXJzIg==|base64 -d)"
+    print_section "MEDIUM INPUTS - 100 numbers"
     perf_test 100 3
     
-    eval "$(echo cHJpbnRfc2VjdGlvbiAiTEFSR0UgSU5QVVRTIC0gNTAwIG51bWJlcnMi|base64 -d)"
+    print_section "LARGE INPUTS - 500 numbers"
     perf_test 500 2
     
     print_summary
