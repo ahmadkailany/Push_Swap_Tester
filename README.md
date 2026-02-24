@@ -269,6 +269,19 @@ Tests only the simple method with 500 numbers, 15 times
 
 ---
 
+## 🆕 Latest Updates (v3.0)
+
+### What's New?
+- ✨ Enhanced error testing with comprehensive overflow detection
+- 🎯 Improved performance benchmarking with detailed statistics
+- 🔧 Bug fixes and stability improvements
+- 📊 Better output formatting and color-coded results
+- 🧪 Additional edge case testing
+- 🚀 Optimized test execution speed
+- 💡 More accurate test results and validation
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to:
@@ -294,7 +307,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Contact
 
 **Ahmad Kailany**
-- GitHub: [@ahmadkailany](https://github.com/ahmadkailany)
+- 🌐 Website: [https://ahmadkailany.com/](https://ahmadkailany.com/)
+- 🎓 42 Intra: [https://profile-v3.intra.42.fr/users/akailany](https://profile-v3.intra.42.fr/users/akailany)
+- 💻 GitHub: [@ahmadkailany](https://github.com/ahmadkailany)
+
+---
+
+## ⚠️ Important Note
+
+> **Disclaimer**: This tester is designed to help you test your push_swap project during development. While it covers many test cases and scenarios, it may contain bugs or edge cases that are not covered. **Do not rely on it 100%** - use it as a helpful tool, but always keep potential errors in mind and verify your results. The official evaluation may include additional test cases not covered by this tester. Test thoroughly and understand your implementation!
 
 ---
 
