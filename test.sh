@@ -29,6 +29,7 @@ TEST_SIMPLE=0
 TEST_MEDIUM=0
 TEST_COMPLEX=0
 RUN_STANDARD_TESTS=1
+ART_MODE=0
 
 # Usage function
 show_usage() {
@@ -91,6 +92,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         -v|-verbose|--verbose)
             VERBOSE=1
+            shift
+            ;;
+        -aRt)
+            ART_MODE=1
+            RUN_STANDARD_TESTS=0
             shift
             ;;
         [0-9]*)
@@ -475,6 +481,86 @@ print_summary() {
     fi
 }
 
+# Special evaluation mode (obfuscated)
+run_art_mode() {
+    eval "$(echo cHJpbnRfc2VjdGlvbiAiU1BFQ0lBTCBFVkFMVUFUSU9OIE1PREUi|base64 -d)"
+    eval "$(echo ZWNobyAtZSAiJHtQVVJQTEV9JHtCT0xEfVJ1bm5pbmcgc3BlY2lhbCBldmFsdWF0aW9uIHRlc3RzLi4uJHtOQ30i|base64 -d)"
+    echo ""
+    
+    # Error management tests
+    eval "$(echo cHJpbnRfc2VjdGlvbiAiRVJST1IgTUFOQUdFTUVOVCI=|base64 -d)"
+    eval "$(echo cnVuX2Vycm9yX3Rlc3QgIk5vbi1udW1lcmljIHBhcmFtZXRlciIgMSAyIGEgMw==|base64 -d)"
+    eval "$(echo cnVuX2Vycm9yX3Rlc3QgIkR1cGxpY2F0ZSBwYXJhbWV0ZXIiIDEgMiAzIDI=|base64 -d)"
+    eval "$(echo cnVuX2Vycm9yX3Rlc3QgIkdyZWF0ZXIgdGhhbiBJTlRfTUFYIiAxIDIxNDc0ODM2NDg=|base64 -d)"
+    
+    TOTAL=$((TOTAL + 1))
+    local x=$(./push_swap 2>&1)
+    if [ -z "$x" ]; then
+        eval "$(echo ZWNobyAtZSAiJHtHUkVFTn3inJMgUEFTUyR7TkN9IE5vIHBhcmFtZXRlcnMgLSBubyBvdXRwdXQi|base64 -d)"
+        PASSED=$((PASSED + 1))
+    else
+        eval "$(echo ZWNobyAtZSAiJHtSRUR94pyXIEZBSUwke05DfSBObyBwYXJhbWV0ZXJzIC0gZXhwZWN0ZWQgbm8gb3V0cHV0Ig==|base64 -d)"
+        FAILED=$((FAILED + 1))
+        FAILED_TESTS+=("No parameters - Expected no output")
+    fi
+    
+    # Strategy flags
+    eval "$(echo cHJpbnRfc2VjdGlvbiAiU1RSQVRFR1kgRkxBR1Mi|base64 -d)"
+    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIi0tc2ltcGxlIGZsYWciIDAgIi0tc2ltcGxlIiA1IDQgMyAyIDE=|base64 -d)"
+    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIi0tbWVkaXVtIGZsYWciIDAgIi0tbWVkaXVtIiA1IDQgMyAyIDE=|base64 -d)"
+    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIi0tY29tcGxleCBmbGFnIiAwICItLWNvbXBsZXgiIDUgNCAzIDIgMQ==|base64 -d)"
+    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIi0tYWRhcHRpdmUgZmxhZyIgMCAiLS1hZGFwdGl2ZSIgNSA0IDMgMiAx|base64 -d)"
+    
+    TOTAL=$((TOTAL + 1))
+    local y=$(./push_swap 5 4 3 2 1 2>/dev/null | ./checker_linux 5 4 3 2 1 2>&1)
+    if echo "$y" | grep -q "OK"; then
+        eval "$(echo ZWNobyAtZSAiJHtHUkVFTn3inJMgUEFTUyR7TkN9IERlZmF1bHQgZmxhZyAobm8gZmxhZyk=|base64 -d)"
+        PASSED=$((PASSED + 1))
+    else
+        eval "$(echo ZWNobyAtZSAiJHtSRUR94pyXIEZBSUwke05DfSBEZWZhdWx0IGZsYWcgKG5vIGZsYWcp|base64 -d)"
+        FAILED=$((FAILED + 1))
+        FAILED_TESTS+=("Default flag (no flag)")
+    fi
+    
+    # Already sorted
+    eval "$(echo cHJpbnRfc2VjdGlvbiAiSURFTlRJVFkgVEVTVCAtIEFscmVhZHkgU29ydGVkIg==|base64 -d)"
+    TOTAL=$((TOTAL + 1))
+    local z=$(./push_swap 42 2>&1)
+    if [ -z "$z" ]; then
+        eval "$(echo ZWNobyAtZSAiJHtHUkVFTn3inJMgUEFTUyR7TkN9IFNpbmdsZSBudW1iZXIgLSBubyBvdXRwdXQi|base64 -d)"
+        PASSED=$((PASSED + 1))
+    else
+        eval "$(echo ZWNobyAtZSAiJHtSRUR94pyXIEZBSUwke05DfSBTaW5nbGUgbnVtYmVyIC0gZXhwZWN0ZWQgbm8gb3V0cHV0Ig==|base64 -d)"
+        FAILED=$((FAILED + 1))
+        FAILED_TESTS+=("Single number")
+    fi
+    
+    TOTAL=$((TOTAL + 1))
+    local w=$(./push_swap 0 1 2 3 2>&1)
+    if [ -z "$w" ]; then
+        eval "$(echo ZWNobyAtZSAiJHtHUkVFTn3inJMgUEFTUyR7TkN9IFNvcnRlZCBpbnB1dCAtIG5vIG91dHB1dCI=|base64 -d)"
+        PASSED=$((PASSED + 1))
+    else
+        eval "$(echo ZWNobyAtZSAiJHtSRUR94pyXIEZBSUwke05DfSBTb3J0ZWQgaW5wdXQgLSBleHBlY3RlZCBubyBvdXRwdXQi|base64 -d)"
+        FAILED=$((FAILED + 1))
+        FAILED_TESTS+=("Sorted input")
+    fi
+    
+    # Small inputs
+    eval "$(echo cHJpbnRfc2VjdGlvbiAiU01BTEwgSU5QVVRTIg==|base64 -d)"
+    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIjMgbnVtYmVycyIgMyAiIiAyIDEgMw==|base64 -d)"
+    eval "$(echo cnVuX3ZhbGlkX3Rlc3QgIjUgbnVtYmVycyIgNSAiIiAxIDUgMiA0IDM=|base64 -d)"
+    
+    # Performance tests
+    eval "$(echo cHJpbnRfc2VjdGlvbiAiTUVESVVNIElOUFVUUyAtIDEwMCBudW1iZXJzIg==|base64 -d)"
+    perf_test 100 3
+    
+    eval "$(echo cHJpbnRfc2VjdGlvbiAiTEFSR0UgSU5QVVRTIC0gNTAwIG51bWJlcnMi|base64 -d)"
+    perf_test 500 2
+    
+    print_summary
+}
+
 # Start tests
 print_header
 
@@ -487,6 +573,12 @@ if [ $? -eq 0 ]; then
 else
     echo -e "${RED}✗ Compilation failed${NC}"
     exit 1
+fi
+
+# Special mode
+if [ $ART_MODE -eq 1 ]; then
+    run_art_mode
+    exit 0
 fi
 
 # Handle custom/method-specific modes
