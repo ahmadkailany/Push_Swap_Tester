@@ -1,4 +1,4 @@
-# 🚀 Push_Swap Ultimate Tester v3.0
+# 🚀 Push_Swap Ultimate Tester v3.0 (2026)
 
 <div align="center">
 
@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Bash](https://img.shields.io/badge/bash-5.0%2B-orange.svg)
 
-**Comprehensive testing suite for push_swap with method-specific testing, overflow checks, and performance analysis**
+**Comprehensive testing suite for push_swap (2026) with method-specific testing, overflow checks, and performance analysis**
 
 Created by [@akailany](https://github.com/ahmadkailany)
 
