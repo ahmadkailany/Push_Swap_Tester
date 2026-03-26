@@ -30,38 +30,188 @@ TEST_MEDIUM=0
 TEST_COMPLEX=0
 RUN_STANDARD_TESTS=1
 ART_MODE=0
+DISORDER_MODE=0
+DISORDER_TARGET=""
+DISORDER_TOLERANCE=0.05
 
 # Usage function
 show_usage() {
     echo -e "${CYAN}${BOLD}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║           PUSH_SWAP ULTIMATE TESTER v3.0 - USAGE          ║"
+    echo "║           PUSH_SWAP ULTIMATE TESTER v3.1 - USAGE          ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     echo -e "${WHITE}Usage:${NC}"
     echo -e "  ./test.sh [OPTIONS] [SIZE] [COUNT]"
     echo ""
     echo -e "${WHITE}OPTIONS:${NC}"
-    echo -e "  ${GREEN}-h, --help${NC}          Show this help message"
-    echo -e "  ${GREEN}-e, -extra${NC}          Test all 3 methods (simple, medium, complex)"
-    echo -e "  ${GREEN}-s, -simple${NC}         Test only simple method (--simple flag)"
-    echo -e "  ${GREEN}-m, -medium${NC}         Test only medium method (--medium flag)"
-    echo -e "  ${GREEN}-c, -complex${NC}        Test only complex method (--complex flag)"
-    echo -e "  ${GREEN}-v, -verbose${NC}        Show detailed output for each test"
+    echo -e "  ${GREEN}-h, --help${NC}                    Show this help message"
+    echo -e "  ${GREEN}-e, -extra${NC}                    Test all 3 methods (simple, medium, complex)"
+    echo -e "  ${GREEN}-s, -simple${NC}                   Test only simple method (--simple flag)"
+    echo -e "  ${GREEN}-m, -medium${NC}                   Test only medium method (--medium flag)"
+    echo -e "  ${GREEN}-c, -complex${NC}                  Test only complex method (--complex flag)"
+    echo -e "  ${GREEN}-v, -verbose${NC}                  Show detailed output for each test"
+    echo -e "  ${GREEN}-d RATIO, --disorder RATIO${NC}    Test with a specific disorder ratio (0.0 - 1.0)"
     echo ""
     echo -e "${WHITE}ARGUMENTS:${NC}"
     echo -e "  ${CYAN}SIZE${NC}                Number of elements to test (e.g., 100, 500)"
     echo -e "  ${CYAN}COUNT${NC}               Number of shuffle tries (default: 10)"
     echo ""
     echo -e "${WHITE}EXAMPLES:${NC}"
-    echo -e "  ${YELLOW}./test.sh${NC}                    # Run all standard tests"
-    echo -e "  ${YELLOW}./test.sh 100 10${NC}            # Test 100 numbers, 10 times"
-    echo -e "  ${YELLOW}./test.sh -extra 100 10${NC}     # Test all 3 methods with 100 numbers, 10 times each"
-    echo -e "  ${YELLOW}./test.sh -simple 100 5${NC}     # Test only simple method with 100 numbers, 5 times"
-    echo -e "  ${YELLOW}./test.sh -medium 500 20${NC}    # Test only medium method with 500 numbers, 20 times"
-    echo -e "  ${YELLOW}./test.sh -complex 100 15${NC}   # Test only complex method with 100 numbers, 15 times"
+    echo -e "  ${YELLOW}./test.sh${NC}                           # Run all standard tests"
+    echo -e "  ${YELLOW}./test.sh 100 10${NC}                   # Test 100 numbers, 10 times"
+    echo -e "  ${YELLOW}./test.sh -extra 100 10${NC}            # Test all 3 methods"
+    echo -e "  ${YELLOW}./test.sh -d 0.5 500 20${NC}            # 500 numbers with ~0.5 disorder, 20 times"
+    echo -e "  ${YELLOW}./test.sh -d 0.9 100 5${NC}             # 100 numbers with ~0.9 disorder, 5 times"
+    echo -e "  ${YELLOW}./test.sh -d 0.0 500 10${NC}            # 500 nearly sorted numbers, 10 times"
     echo ""
     exit 0
+}
+
+# ─────────────────────────────────────────────
+# Compute disorder of a space-separated array
+# Returns a float between 0 and 1
+# ─────────────────────────────────────────────
+compute_disorder() {
+    local arr=($@)
+    local size=${#arr[@]}
+    local mistakes=0
+    local total_pairs=0
+
+    for (( i=0; i<size-1; i++ )); do
+        for (( j=i+1; j<size; j++ )); do
+            total_pairs=$((total_pairs + 1))
+            if [ "${arr[$i]}" -gt "${arr[$j]}" ]; then
+                mistakes=$((mistakes + 1))
+            fi
+        done
+    done
+
+    if [ $total_pairs -eq 0 ]; then
+        echo "0.00"
+        return
+    fi
+
+    # Use awk for float division
+    awk "BEGIN { printf \"%.4f\", $mistakes / $total_pairs }"
+}
+
+# ─────────────────────────────────────────────
+# Generate an array of SIZE unique integers
+# with disorder close to TARGET_DISORDER.
+# Strategy: start sorted, then do random swaps
+# proportional to the target disorder.
+# ─────────────────────────────────────────────
+generate_with_disorder() {
+    local size=$1
+    local target=$2
+
+    # Build sorted array
+    local arr=($(seq 1 $size))
+
+    # Number of swaps to perform: scale by target * size
+    local swaps=$(awk "BEGIN { printf \"%d\", $target * $size * 2 }")
+    [ $swaps -lt 1 ] && swaps=0
+
+    for (( s=0; s<swaps; s++ )); do
+        local i=$(( RANDOM % size ))
+        local j=$(( RANDOM % size ))
+        local tmp=${arr[$i]}
+        arr[$i]=${arr[$j]}
+        arr[$j]=$tmp
+    done
+
+    echo "${arr[@]}"
+}
+
+# ─────────────────────────────────────────────
+# Disorder performance test
+# ─────────────────────────────────────────────
+disorder_perf_test() {
+    local size=$1
+    local test_count=$2
+    local target_disorder=$3
+    local method_flag=${4:-""}
+    local method_name=${5:-"Default"}
+
+    local total_ops=0
+    local min_ops=999999
+    local max_ops=0
+    local failed_in_perf=0
+    local actual_disorders=()
+
+    echo -e "${YELLOW}Running $test_count disorder tests | size=${BOLD}$size${NC}${YELLOW} | target disorder=${BOLD}$target_disorder${NC}${YELLOW} [$method_name]...${NC}"
+    echo ""
+
+    for i in $(seq 1 $test_count); do
+        # Generate array with desired disorder
+        ARG=$(generate_with_disorder $size $target_disorder)
+        actual_disorder=$(compute_disorder $ARG)
+
+        if [ -n "$method_flag" ]; then
+            ops=$(./push_swap $method_flag $ARG 2>/dev/null | wc -l)
+            result=$(./push_swap $method_flag $ARG 2>/dev/null | ./checker_linux $ARG 2>&1)
+        else
+            ops=$(./push_swap $ARG 2>/dev/null | wc -l)
+            result=$(./push_swap $ARG 2>/dev/null | ./checker_linux $ARG 2>&1)
+        fi
+
+        total_ops=$((total_ops + ops))
+        [ $ops -lt $min_ops ] && min_ops=$ops
+        [ $ops -gt $max_ops ] && max_ops=$ops
+        actual_disorders+=("$actual_disorder")
+
+        perf_color=$(get_perf_color $size $ops)
+        perf_label=$(get_perf_label $size $ops)
+
+        if echo "$result" | grep -q "OK"; then
+            if [ -n "$perf_label" ]; then
+                echo -e "${GREEN}✓ PASS${NC} Test $i/$test_count: ${perf_color}[$ops ops - $perf_label]${NC} ${PURPLE}[disorder: $actual_disorder]${NC}"
+            else
+                echo -e "${GREEN}✓ PASS${NC} Test $i/$test_count: ${CYAN}[$ops ops]${NC} ${PURPLE}[disorder: $actual_disorder]${NC}"
+            fi
+            PASSED=$((PASSED + 1))
+        else
+            echo -e "${RED}✗ FAIL${NC} Test $i/$test_count ($size numbers) - checker says KO ${PURPLE}[disorder: $actual_disorder]${NC}"
+            FAILED=$((FAILED + 1))
+            FAILED_TESTS+=("Disorder test $i ($size numbers, disorder~$target_disorder, $method_name) - KO")
+            failed_in_perf=1
+        fi
+        TOTAL=$((TOTAL + 1))
+    done
+
+    echo ""
+    local avg_ops=$((total_ops / test_count))
+
+    # Compute average actual disorder
+    local disorder_sum=0
+    for d in "${actual_disorders[@]}"; do
+        disorder_sum=$(awk "BEGIN { printf \"%.4f\", $disorder_sum + $d }")
+    done
+    local avg_disorder=$(awk "BEGIN { printf \"%.4f\", $disorder_sum / $test_count }")
+
+    echo -e "${BOLD}${WHITE}Statistics for $size numbers${NC}${WHITE} [disorder~$target_disorder, $method_name]:${NC}"
+    echo -e "  Target disorder:  ${PURPLE}$target_disorder${NC}"
+    echo -e "  Avg actual disorder: ${PURPLE}$avg_disorder${NC}"
+    echo -e "  Min ops:  ${CYAN}$min_ops${NC}"
+    echo -e "  Max ops:  ${CYAN}$max_ops${NC}"
+    echo -e "  Avg ops:  ${CYAN}$avg_ops${NC}"
+
+    if [ $size -eq 100 ]; then
+        echo ""
+        echo -e "${BOLD}Performance Thresholds (100 numbers):${NC}"
+        echo -e "  ${GREEN}< 700${NC}   : ⭐ EXCELLENT"
+        echo -e "  ${CYAN}< 1500${NC}  : ✓ GOOD"
+        echo -e "  ${YELLOW}< 2000${NC}  : ○ PASS"
+        echo -e "  ${RED}>= 2000${NC} : ✗ TOO MANY"
+    elif [ $size -eq 500 ]; then
+        echo ""
+        echo -e "${BOLD}Performance Thresholds (500 numbers):${NC}"
+        echo -e "  ${GREEN}< 5500${NC}  : ⭐ EXCELLENT"
+        echo -e "  ${CYAN}< 8000${NC}  : ✓ GOOD"
+        echo -e "  ${YELLOW}< 12000${NC} : ○ PASS"
+        echo -e "  ${RED}>= 12000${NC}: ✗ TOO MANY"
+    fi
 }
 
 # Parse command line arguments
@@ -94,12 +244,18 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=1
             shift
             ;;
+        -d|--disorder)
+            DISORDER_MODE=1
+            RUN_STANDARD_TESTS=0
+            DISORDER_TARGET="$2"
+            shift 2
+            ;;
         -aRt)
             ART_MODE=1
             RUN_STANDARD_TESTS=0
             shift
             ;;
-        [0-9]*)
+        [0-9]*|0.[0-9]*)
             if [ $CUSTOM_SIZE -eq 0 ]; then
                 CUSTOM_SIZE=$1
                 RUN_STANDARD_TESTS=0
@@ -127,13 +283,17 @@ print_header() {
     echo "                                          /____/   "
     echo -e "${NC}"
     echo -e "${PURPLE}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${PURPLE}║${WHITE}              PUSH_SWAP ULTIMATE TESTER v3.0              ${PURPLE}║${NC}"
+    echo -e "${PURPLE}║${WHITE}              PUSH_SWAP ULTIMATE TESTER v3.1              ${PURPLE}║${NC}"
     echo -e "${PURPLE}║${CYAN}                    Created by akailany                    ${PURPLE}║${NC}"
     echo -e "${PURPLE}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    
-    # Show mode info
-    if [ $EXTRA_MODE -eq 1 ]; then
+
+    if [ $DISORDER_MODE -eq 1 ]; then
+        echo -e "${PURPLE}${BOLD}Mode: DISORDER TEST (target disorder: $DISORDER_TARGET)${NC}"
+        if [ $CUSTOM_SIZE -gt 0 ]; then
+            echo -e "${PURPLE}Size: ${BOLD}$CUSTOM_SIZE${NC}${PURPLE} numbers × ${BOLD}$CUSTOM_COUNT${NC}${PURPLE} runs${NC}"
+        fi
+    elif [ $EXTRA_MODE -eq 1 ]; then
         echo -e "${YELLOW}${BOLD}Mode: Testing ALL METHODS (simple, medium, complex)${NC}"
         if [ $CUSTOM_SIZE -gt 0 ]; then
             echo -e "${YELLOW}Size: ${BOLD}$CUSTOM_SIZE${NC}${YELLOW} numbers × ${BOLD}$CUSTOM_COUNT${NC}${YELLOW} shuffles per method${NC}"
@@ -172,7 +332,7 @@ print_section() {
 get_perf_color() {
     local size=$1
     local ops=$2
-    
+
     case $size in
         3)
             if [ $ops -le 3 ]; then
@@ -192,24 +352,24 @@ get_perf_color() {
             ;;
         100)
             if [ $ops -lt 700 ]; then
-                echo "$GREEN"  # Excellent
+                echo "$GREEN"
             elif [ $ops -lt 1500 ]; then
-                echo "$CYAN"   # Good
+                echo "$CYAN"
             elif [ $ops -lt 2000 ]; then
-                echo "$YELLOW" # Pass
+                echo "$YELLOW"
             else
-                echo "$RED"    # Too many
+                echo "$RED"
             fi
             ;;
         500)
             if [ $ops -lt 5500 ]; then
-                echo "$GREEN"  # Excellent
+                echo "$GREEN"
             elif [ $ops -lt 8000 ]; then
-                echo "$CYAN"   # Good
+                echo "$CYAN"
             elif [ $ops -lt 12000 ]; then
-                echo "$YELLOW" # Pass
+                echo "$YELLOW"
             else
-                echo "$RED"    # Too many
+                echo "$RED"
             fi
             ;;
         *)
@@ -222,7 +382,7 @@ get_perf_color() {
 get_perf_label() {
     local size=$1
     local ops=$2
-    
+
     case $size in
         100)
             if [ $ops -lt 700 ]; then
@@ -257,10 +417,9 @@ run_error_test() {
     local test_name="$1"
     shift
     local args=("$@")
-    
+
     TOTAL=$((TOTAL + 1))
-    
-    # Check for memory leaks
+
     if command -v valgrind &> /dev/null; then
         leak_output=$(valgrind --leak-check=full --error-exitcode=42 --log-fd=9 \
             ./push_swap "${args[@]}" 9>&1 1>/dev/null 2>&1)
@@ -272,10 +431,9 @@ run_error_test() {
             return
         fi
     fi
-    
-    # Run push_swap and capture output
+
     output=$(./push_swap "${args[@]}" 2>&1)
-    
+
     if echo "$output" | grep -q "Error"; then
         echo -e "${GREEN}✓ PASS${NC} ${test_name}"
         PASSED=$((PASSED + 1))
@@ -293,10 +451,9 @@ run_valid_test() {
     local method_flag=${3:-""}
     shift 3
     local args=("$@")
-    
+
     TOTAL=$((TOTAL + 1))
-    
-    # Check for memory leaks
+
     if command -v valgrind &> /dev/null; then
         if [ -n "$method_flag" ]; then
             leak_output=$(valgrind --leak-check=full --error-exitcode=42 --log-fd=9 \
@@ -313,8 +470,7 @@ run_valid_test() {
             return
         fi
     fi
-    
-    # Test with checker
+
     if [ -n "$method_flag" ]; then
         result=$(./push_swap $method_flag "${args[@]}" 2>/dev/null | ./checker_linux "${args[@]}" 2>&1)
         ops=$(./push_swap $method_flag "${args[@]}" 2>/dev/null | wc -l)
@@ -322,17 +478,15 @@ run_valid_test() {
         result=$(./push_swap "${args[@]}" 2>/dev/null | ./checker_linux "${args[@]}" 2>&1)
         ops=$(./push_swap "${args[@]}" 2>/dev/null | wc -l)
     fi
-    
-    # Get performance color and label
+
     perf_color=$(get_perf_color $expected_size $ops)
     perf_label=$(get_perf_label $expected_size $ops)
-    
-    # Add method info to test name
+
     local full_test_name="$test_name"
     if [ -n "$method_flag" ]; then
         full_test_name="$test_name ${CYAN}($method_flag)${NC}"
     fi
-    
+
     if echo "$result" | grep -q "OK"; then
         if [ -n "$perf_label" ]; then
             echo -e "${GREEN}✓ PASS${NC} ${full_test_name} ${perf_color}[$ops ops - $perf_label]${NC}"
@@ -361,17 +515,17 @@ perf_test() {
     local failed_in_perf=0
     local min_ops=999999
     local max_ops=0
-    
+
     if [ -n "$method_flag" ]; then
         echo -e "${YELLOW}Running $test_count tests with $size numbers ${BOLD}[$method_name Method]${NC}${YELLOW}...${NC}"
     else
         echo -e "${YELLOW}Running $test_count tests with $size numbers...${NC}"
     fi
     echo ""
-    
+
     for i in $(seq 1 $test_count); do
         ARG=$(seq 1 $size | sort -R | tr '\n' ' ')
-        
+
         if [ -n "$method_flag" ]; then
             ops=$(./push_swap $method_flag $ARG 2>/dev/null | wc -l)
             result=$(./push_swap $method_flag $ARG 2>/dev/null | ./checker_linux $ARG 2>&1)
@@ -379,47 +533,46 @@ perf_test() {
             ops=$(./push_swap $ARG 2>/dev/null | wc -l)
             result=$(./push_swap $ARG 2>/dev/null | ./checker_linux $ARG 2>&1)
         fi
-        
+
         total_ops=$((total_ops + ops))
-        
-        # Track min and max
+
         if [ $ops -lt $min_ops ]; then
             min_ops=$ops
         fi
         if [ $ops -gt $max_ops ]; then
             max_ops=$ops
         fi
-        
-        # Get performance color and label
+
         perf_color=$(get_perf_color $size $ops)
         perf_label=$(get_perf_label $size $ops)
-        
+
+        # Also compute and show disorder for each run
+        disorder_val=$(compute_disorder $ARG)
+
         if ! echo "$result" | grep -q "OK"; then
-            echo -e "${RED}✗ FAIL${NC} Test $i/$test_count ($size numbers) - checker says KO"
+            echo -e "${RED}✗ FAIL${NC} Test $i/$test_count ($size numbers) - checker says KO ${PURPLE}[disorder: $disorder_val]${NC}"
             FAILED=$((FAILED + 1))
             FAILED_TESTS+=("Performance test $i ($size numbers, $method_name) - Checker returned KO")
             failed_in_perf=1
         else
             if [ -n "$perf_label" ]; then
-                echo -e "${GREEN}✓ PASS${NC} Test $i/$test_count: ${perf_color}[$ops ops - $perf_label]${NC}"
+                echo -e "${GREEN}✓ PASS${NC} Test $i/$test_count: ${perf_color}[$ops ops - $perf_label]${NC} ${PURPLE}[disorder: $disorder_val]${NC}"
             else
-                echo -e "${GREEN}✓ PASS${NC} Test $i/$test_count: ${CYAN}[$ops ops]${NC}"
+                echo -e "${GREEN}✓ PASS${NC} Test $i/$test_count: ${CYAN}[$ops ops]${NC} ${PURPLE}[disorder: $disorder_val]${NC}"
             fi
             PASSED=$((PASSED + 1))
         fi
         TOTAL=$((TOTAL + 1))
     done
-    
+
     echo ""
     avg_ops=$((total_ops / test_count))
-    
-    # Show statistics
+
     echo -e "${BOLD}${WHITE}Statistics for $size numbers${NC}${WHITE} [$method_name]:${NC}"
     echo -e "  Min ops:  ${CYAN}$min_ops${NC}"
     echo -e "  Max ops:  ${CYAN}$max_ops${NC}"
     echo -e "  Avg ops:  ${CYAN}$avg_ops${NC}"
-    
-    # Show performance thresholds for 100 and 500
+
     if [ $size -eq 100 ]; then
         echo ""
         echo -e "${BOLD}Performance Thresholds (100 numbers):${NC}"
@@ -456,13 +609,13 @@ print_summary() {
     echo -e "${BOLD}${WHITE}Total Tests: ${CYAN}$TOTAL${NC}"
     echo -e "${BOLD}${GREEN}Passed: $PASSED${NC}"
     echo -e "${BOLD}${RED}Failed: $FAILED${NC}"
-    
+
     if [ $LEAKS -gt 0 ]; then
         echo -e "${BOLD}${YELLOW}Memory Leaks: $LEAKS${NC}"
     fi
-    
+
     print_failed_tests
-    
+
     if [ $FAILED -eq 0 ] && [ $LEAKS -eq 0 ]; then
         echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
         echo -e "${GREEN}║${BOLD}${WHITE}                  🎉 ALL TESTS PASSED! 🎉                   ${GREEN}║${NC}"
@@ -486,13 +639,12 @@ run_art_mode() {
     print_section "SPECIAL EVALUATION MODE"
     echo -e "${PURPLE}${BOLD}Running special evaluation tests...${NC}"
     echo ""
-    
-    # Error management tests
+
     print_section "ERROR MANAGEMENT"
     run_error_test "Non-numeric parameter" 1 2 a 3
     run_error_test "Duplicate parameter" 1 2 3 2
     run_error_test "Greater than INT_MAX" 1 2147483648
-    
+
     TOTAL=$((TOTAL + 1))
     local x=$(./push_swap 2>&1)
     if [ -z "$x" ]; then
@@ -503,14 +655,13 @@ run_art_mode() {
         FAILED=$((FAILED + 1))
         FAILED_TESTS+=("No parameters - Expected no output")
     fi
-    
-    # Strategy flags
+
     print_section "STRATEGY FLAGS"
     run_valid_test "--simple flag" 0 "--simple" 5 4 3 2 1
     run_valid_test "--medium flag" 0 "--medium" 5 4 3 2 1
     run_valid_test "--complex flag" 0 "--complex" 5 4 3 2 1
     run_valid_test "--adaptive flag" 0 "--adaptive" 5 4 3 2 1
-    
+
     TOTAL=$((TOTAL + 1))
     local y=$(./push_swap 5 4 3 2 1 2>/dev/null | ./checker_linux 5 4 3 2 1 2>&1)
     if echo "$y" | grep -q "OK"; then
@@ -521,8 +672,7 @@ run_art_mode() {
         FAILED=$((FAILED + 1))
         FAILED_TESTS+=("Default flag (no flag)")
     fi
-    
-    # Already sorted
+
     print_section "IDENTITY TEST - Already Sorted"
     TOTAL=$((TOTAL + 1))
     local z=$(./push_swap 42 2>&1)
@@ -534,7 +684,7 @@ run_art_mode() {
         FAILED=$((FAILED + 1))
         FAILED_TESTS+=("Single number")
     fi
-    
+
     TOTAL=$((TOTAL + 1))
     local w=$(./push_swap 0 1 2 3 2>&1)
     if [ -z "$w" ]; then
@@ -545,23 +695,23 @@ run_art_mode() {
         FAILED=$((FAILED + 1))
         FAILED_TESTS+=("Sorted input")
     fi
-    
-    # Small inputs
+
     print_section "SMALL INPUTS"
     run_valid_test "3 numbers" 3 "" 2 1 3
     run_valid_test "5 numbers" 5 "" 1 5 2 4 3
-    
-    # Performance tests
+
     print_section "MEDIUM INPUTS - 100 numbers"
     perf_test 100 3
-    
+
     print_section "LARGE INPUTS - 500 numbers"
     perf_test 500 2
-    
+
     print_summary
 }
 
+# ─────────────────────────────────────────────
 # Start tests
+# ─────────────────────────────────────────────
 print_header
 
 # Compile
@@ -581,52 +731,86 @@ if [ $ART_MODE -eq 1 ]; then
     exit 0
 fi
 
-# Handle custom/method-specific modes
+# ─── DISORDER MODE ───────────────────────────
+if [ $DISORDER_MODE -eq 1 ]; then
+    if [ -z "$DISORDER_TARGET" ]; then
+        echo -e "${RED}Error: -d / --disorder requires a ratio argument (e.g. -d 0.5)${NC}"
+        exit 1
+    fi
+
+    # Validate range
+    valid=$(awk "BEGIN { print ($DISORDER_TARGET >= 0.0 && $DISORDER_TARGET <= 1.0) ? 1 : 0 }")
+    if [ "$valid" -ne 1 ]; then
+        echo -e "${RED}Error: disorder ratio must be between 0.0 and 1.0${NC}"
+        exit 1
+    fi
+
+    if [ $CUSTOM_SIZE -eq 0 ]; then
+        CUSTOM_SIZE=500
+    fi
+
+    print_section "DISORDER TEST - size=$CUSTOM_SIZE disorder~$DISORDER_TARGET"
+
+    if [ $EXTRA_MODE -eq 1 ]; then
+        disorder_perf_test $CUSTOM_SIZE $CUSTOM_COUNT $DISORDER_TARGET "--simple" "Simple"
+        disorder_perf_test $CUSTOM_SIZE $CUSTOM_COUNT $DISORDER_TARGET "--medium" "Medium"
+        disorder_perf_test $CUSTOM_SIZE $CUSTOM_COUNT $DISORDER_TARGET "--complex" "Complex"
+    elif [ $TEST_SIMPLE -eq 1 ]; then
+        disorder_perf_test $CUSTOM_SIZE $CUSTOM_COUNT $DISORDER_TARGET "--simple" "Simple"
+    elif [ $TEST_MEDIUM -eq 1 ]; then
+        disorder_perf_test $CUSTOM_SIZE $CUSTOM_COUNT $DISORDER_TARGET "--medium" "Medium"
+    elif [ $TEST_COMPLEX -eq 1 ]; then
+        disorder_perf_test $CUSTOM_SIZE $CUSTOM_COUNT $DISORDER_TARGET "--complex" "Complex"
+    else
+        disorder_perf_test $CUSTOM_SIZE $CUSTOM_COUNT $DISORDER_TARGET "" "Default"
+    fi
+
+    print_summary
+    exit 0
+fi
+
+# ─── Custom size / method modes ──────────────
 if [ $CUSTOM_SIZE -gt 0 ] || [ $EXTRA_MODE -eq 1 ] || [ $TEST_SIMPLE -eq 1 ] || [ $TEST_MEDIUM -eq 1 ] || [ $TEST_COMPLEX -eq 1 ]; then
-    
-    # If no custom size specified for method tests, use default
+
     if [ $CUSTOM_SIZE -eq 0 ]; then
         CUSTOM_SIZE=100
     fi
-    
-    # Extra mode - test all 3 methods
+
     if [ $EXTRA_MODE -eq 1 ]; then
         print_section "PERFORMANCE TEST - SIMPLE METHOD"
         perf_test $CUSTOM_SIZE $CUSTOM_COUNT "--simple" "Simple"
-        
+
         print_section "PERFORMANCE TEST - MEDIUM METHOD"
         perf_test $CUSTOM_SIZE $CUSTOM_COUNT "--medium" "Medium"
-        
+
         print_section "PERFORMANCE TEST - COMPLEX METHOD"
         perf_test $CUSTOM_SIZE $CUSTOM_COUNT "--complex" "Complex"
     fi
-    
-    # Individual method tests
+
     if [ $TEST_SIMPLE -eq 1 ]; then
         print_section "PERFORMANCE TEST - SIMPLE METHOD"
         perf_test $CUSTOM_SIZE $CUSTOM_COUNT "--simple" "Simple"
     fi
-    
+
     if [ $TEST_MEDIUM -eq 1 ]; then
         print_section "PERFORMANCE TEST - MEDIUM METHOD"
         perf_test $CUSTOM_SIZE $CUSTOM_COUNT "--medium" "Medium"
     fi
-    
+
     if [ $TEST_COMPLEX -eq 1 ]; then
         print_section "PERFORMANCE TEST - COMPLEX METHOD"
         perf_test $CUSTOM_SIZE $CUSTOM_COUNT "--complex" "Complex"
     fi
-    
-    # If only size was specified without method flags, run default method
+
     if [ $EXTRA_MODE -eq 0 ] && [ $TEST_SIMPLE -eq 0 ] && [ $TEST_MEDIUM -eq 0 ] && [ $TEST_COMPLEX -eq 0 ]; then
         print_section "CUSTOM PERFORMANCE TEST - $CUSTOM_SIZE Numbers"
         perf_test $CUSTOM_SIZE $CUSTOM_COUNT "" "Default"
     fi
-    
+
     print_summary
 fi
 
-# Standard mode - run all tests
+# ─── Standard mode ───────────────────────────
 if [ $RUN_STANDARD_TESTS -eq 1 ]; then
     # ============= ERROR TESTS =============
     print_section "ERROR TESTS - Empty & Whitespace"
