@@ -38,7 +38,7 @@ DISORDER_TOLERANCE=0.05
 show_usage() {
     echo -e "${CYAN}${BOLD}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║           PUSH_SWAP ULTIMATE TESTER v3.1 - USAGE          ║"
+    echo "║           PUSH_SWAP ULTIMATE TESTER v3.2 - USAGE          ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     echo -e "${WHITE}Usage:${NC}"
@@ -98,9 +98,13 @@ compute_disorder() {
 
 # ─────────────────────────────────────────────
 # Generate an array of SIZE unique integers
-# with disorder close to TARGET_DISORDER.
-# Strategy: start sorted, then do random swaps
-# proportional to the target disorder.
+# with disorder EXACTLY equal to TARGET_DISORDER.
+#
+# Strategy: start with sorted array, then swap
+# adjacent pairs (i, i+1) only when arr[i] < arr[i+1]
+# — each such swap adds EXACTLY +1 inversion.
+# Stop as soon as we reach the target inversion count.
+# This guarantees the actual disorder == target ratio.
 # ─────────────────────────────────────────────
 generate_with_disorder() {
     local size=$1
@@ -109,16 +113,32 @@ generate_with_disorder() {
     # Build sorted array
     local arr=($(seq 1 $size))
 
-    # Number of swaps to perform: scale by target * size
-    local swaps=$(awk "BEGIN { printf \"%d\", $target * $size * 2 }")
-    [ $swaps -lt 1 ] && swaps=0
+    # total_pairs = n*(n-1)/2
+    local total_pairs=$(( size * (size - 1) / 2 ))
 
-    for (( s=0; s<swaps; s++ )); do
-        local i=$(( RANDOM % size ))
-        local j=$(( RANDOM % size ))
-        local tmp=${arr[$i]}
-        arr[$i]=${arr[$j]}
-        arr[$j]=$tmp
+    # target inversions = floor(ratio * total_pairs)
+    local target_inversions=$(awk "BEGIN { printf \"%d\", int($target * $total_pairs) }")
+
+    if [ "$target_inversions" -le 0 ]; then
+        echo "${arr[@]}"
+        return
+    fi
+
+    # Add inversions one at a time using random adjacent swaps.
+    # Swapping (i, i+1) where arr[i] < arr[i+1] adds exactly 1 inversion.
+    local current_inv=0
+    local max_passes=$(( target_inversions * 4 + size * 2 ))
+
+    for (( pass=0; pass<max_passes && current_inv<target_inversions; pass++ )); do
+        local i=$(( RANDOM % (size - 1) ))
+        local next=$(( i + 1 ))
+        # Only swap if it creates a new inversion (arr[i] < arr[i+1])
+        if [ "${arr[$i]}" -lt "${arr[$next]}" ]; then
+            local tmp=${arr[$i]}
+            arr[$i]=${arr[$next]}
+            arr[$next]=$tmp
+            current_inv=$(( current_inv + 1 ))
+        fi
     done
 
     echo "${arr[@]}"
@@ -283,7 +303,7 @@ print_header() {
     echo "                                          /____/   "
     echo -e "${NC}"
     echo -e "${PURPLE}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${PURPLE}║${WHITE}              PUSH_SWAP ULTIMATE TESTER v3.1              ${PURPLE}║${NC}"
+    echo -e "${PURPLE}║${WHITE}              PUSH_SWAP ULTIMATE TESTER v3.2              ${PURPLE}║${NC}"
     echo -e "${PURPLE}║${CYAN}                    Created by akailany                    ${PURPLE}║${NC}"
     echo -e "${PURPLE}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
